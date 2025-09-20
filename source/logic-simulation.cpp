@@ -2,7 +2,7 @@
 using namespace std;
 
 void lightControl(bool &aLaserBlocked, bool &bLaserBlocked) {
-    int peopleCount = 0;
+    static int peopleCount = 0;
     char input;
     static int blockCount = 0;
     bool redo;
@@ -36,18 +36,31 @@ void lightControl(bool &aLaserBlocked, bool &bLaserBlocked) {
             }
 
             if (blockCount == 0 && bLaserBlocked && !aLaserBlocked) {
-              cout << "Person just entered!\n\n";
+              cout << "Person just entered!\n";
+              peopleCount++;
             }
             else if (blockCount == 0 && !bLaserBlocked && aLaserBlocked) {
-              cout << "Person just exitted!\n\n";
+              cout << "Person just exitted!\n";
+              peopleCount--;
+            }
+
+            if (peopleCount == 1){
+              cout << "There is 1 person in the room\n\n"; //This is done for better grammar in the output :D
+            }
+            else if (peopleCount <= 0) {
+              cout << "There are no people in the room\n\n";
+              peopleCount = 0; //Just in case it goes negative...
+            }
+            else {
+              cout<<"There are " <<peopleCount <<" people in the room\n\n";
             }
 
 }
 int main() {
     bool aLaserBlocked;
     bool bLaserBlocked;
-    bool prevA = false;
-    bool prevB = false;
+    static bool prevA = false;
+    static bool prevB = false;
     char input;
     
     //Temporaty code till we dont have raspberry pi
