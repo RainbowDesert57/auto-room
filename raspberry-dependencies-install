@@ -1,0 +1,40 @@
+#!/bin/bash
+
+echo -e "Using Raspberry Pi OS\n"
+
+# Check if g++ is installed
+if ! command -v g++ &> /dev/null
+then
+    echo "Installing g++"
+    sudo apt update
+    sudo apt install -y g++
+else
+    echo "g++ is already installed"
+fi
+
+# Check if libbcm2835-dev is installed
+if dpkg -s libbcm2835-dev &> /dev/null
+then
+    echo "libbcm2835-dev is already installed"
+else
+    echo "Installing libbcm2835-dev"
+    sudo apt update
+    sudo apt install -y libbcm2835-dev
+fi
+
+echo -e "\nMake sure to use #include <bcm2835.h> in your C++ source file\n"
+
+# Clone repo if it doesn't exist
+if [ ! -d "./auto-room" ]; then
+    echo "Cloning repository"
+    git clone https://github.com/RainbowDesert57/auto-room.git
+else
+    echo "Repository already exists"
+fi
+
+echo -e "\nCompiling\n"
+g++ ./auto-room/src/main.cpp -o ./auto-room/build/main -lbcm2835
+
+echo -e "\nRunning\n"
+./auto-room/build/main
+
