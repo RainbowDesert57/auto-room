@@ -3,9 +3,7 @@ using namespace std;
 
 void lightControl(bool &aLaserBlocked, bool &bLaserBlocked) {
     static int peopleCount = 0;
-    char input;
     static int blockCount = 0;
-    bool redo;
 
           cout << "\nDebug output\n";
             if (aLaserBlocked) {
