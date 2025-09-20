@@ -22,6 +22,8 @@ void lightControl(bool &aLaserBlocked, bool &bLaserBlocked) {
               cout << "Laser 2 is not blocked\n";
             }
 
+
+
 }
 int main() {
     bool aLaserBlocked;
@@ -34,7 +36,7 @@ int main() {
     
     while (true) {
 
-      cout << "Is laser 1 blocked?";
+      cout << "Is laser 1 blocked? (y/n)\n";
       cin >> input;
       if (input == 'y') {
         aLaserBlocked = true;
@@ -43,7 +45,7 @@ int main() {
         aLaserBlocked = false;
       }
 
-      cout << "Is laser 2 blocked?";
+      cout << "Is laser 2 blocked? (y/n)\n";
       cin >> input;
       if (input == 'y') {
         bLaserBlocked = true;
