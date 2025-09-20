@@ -1,14 +1,24 @@
 #include <iostream>
 #include <fstream>
 #include <string>
-#include <thread>
 #include <chrono>
-#include <atomic>
 #include <cstdlib>
 #include <vector>
 #include <alsa/asoundlib.h>
+#include <regex>
+#include <curl/curl.h>
+#include <nlohmann/json.hpp>
+
 
 using namespace std;
+using json = nlohmann::json;
+
+// Callback to store CURL response
+size_t WriteCallback(void* contents, size_t size, size_t nmemb, void* userp) {
+    ((string*)userp)->append((char*)contents, size * nmemb);
+    return size * nmemb;
+}
+
 
 // ALSA parameters
 const char* device = "default";
@@ -101,6 +111,20 @@ string transcribe() {
     return result;
 }
 
+string escape_json(const string& s) {
+    string escaped;
+    for (char c : s) {
+        switch (c) {
+            case '"': escaped += "\\\""; break;
+            case '\\': escaped += "\\\\"; break;
+            case '\n': escaped += "\\n"; break;
+            case '\r': escaped += "\\r"; break;
+            default: escaped += c;
+        }
+    }
+    return escaped;
+}
+
 int main() {
     cout << "Assistant running. Say 'hey homie' or 'hey jarvis' to wake.\n";
 
@@ -126,6 +150,52 @@ int main() {
 
             // Here you can send 'prompt' to GPT API and get a response
             // ...
+                string hf_token = "YOUR_API_KEY"; // replace with your token
+                string model = "deepseek-ai/DeepSeek-R1:novita";
+
+                // JSON payload
+                prompt.erase(prompt.find_last_not_of(" \n\r\t")+1);
+                prompt.erase(0, prompt.find_first_not_of(" \n\r\t"));
+
+                string safePrompt = escape_json(prompt);
+                string data = R"({"model": ")" + model + R"(", "messages":[{"role":"user","content":")" + safePrompt + R"("}]})";
+
+
+    CURL* curl = curl_easy_init();
+    if(curl) {
+        string response;
+
+        struct curl_slist* headers = nullptr;
+        headers = curl_slist_append(headers, ("Authorization: Bearer " + hf_token).c_str());
+        headers = curl_slist_append(headers, "Content-Type: application/json");
+
+        curl_easy_setopt(curl, CURLOPT_URL, "https://router.huggingface.co/v1/chat/completions");
+        curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
+        curl_easy_setopt(curl, CURLOPT_POSTFIELDS, data.c_str());
+        curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteCallback);
+        curl_easy_setopt(curl, CURLOPT_WRITEDATA, &response);
+
+        CURLcode res = curl_easy_perform(curl);
+        if(res != CURLE_OK) {
+            cerr << "curl_easy_perform() failed: " << curl_easy_strerror(res) << endl;
+        } else {
+            try {
+                auto j = json::parse(response);
+                string answer = j["choices"][0]["message"]["content"];
+
+                // Remove <think>...</think> blocks
+                answer = regex_replace(answer, regex("<think>[\\s\\S]*?</think>", regex::icase), "");
+
+                cout << "Assistant answer:\n" << answer << endl;
+            } catch (const std::exception& e) {
+                cerr << "JSON parsing error: " << e.what() << endl;
+            }
+        }
+
+        curl_easy_cleanup(curl);
+        curl_slist_free_all(headers);
+    }
+
         }
     }
 
