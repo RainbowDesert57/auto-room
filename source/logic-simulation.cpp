@@ -4,25 +4,43 @@ using namespace std;
 void lightControl(bool &aLaserBlocked, bool &bLaserBlocked) {
     int peopleCount = 0;
     char input;
-    int totalInput;
+    static int blockCount = 0;
     bool redo;
 
-          cout << "Debug output\n";
+          cout << "\nDebug output\n";
             if (aLaserBlocked) {
-              cout << "Laser 1 is blocked\n";
+              cout << "Laser 1 is blocked\n\n";
             }
             else if (!aLaserBlocked) {
-              cout << "Laser 1 is not blocked\n";
+              cout << "Laser 1 is not blocked\n\n";
             }
             
             if (bLaserBlocked) {
-              cout << "Laser 2 is blocked\n";
+              cout << "Laser 2 is blocked\n\n";
             }
             else if (!bLaserBlocked) {
-              cout << "Laser 2 is not blocked\n";
+              cout << "Laser 2 is not blocked\n\n";
             }
 
 
+            if (aLaserBlocked) {
+              blockCount++;
+              cout << "\nblockCount++ triggered\n";
+              cout << "\nblockCount = " << blockCount << "\n\n";
+            }
+            
+            if (bLaserBlocked) {
+              blockCount--;
+              cout<< "\nblockCount-- triggered\n";
+              cout << "\nblockCount = " << blockCount <<"\n\n";
+            }
+
+            if (blockCount == 0 && bLaserBlocked && !aLaserBlocked) {
+              cout << "Person just entered!\n\n";
+            }
+            else if (blockCount == 0 && !bLaserBlocked && aLaserBlocked) {
+              cout << "Person just exitted!\n\n";
+            }
 
 }
 int main() {
@@ -36,7 +54,7 @@ int main() {
     
     while (true) {
 
-      cout << "Is laser 1 blocked? (y/n)\n";
+      cout << "Is laser 1 blocked? (y/n): ";
       cin >> input;
       if (input == 'y') {
         aLaserBlocked = true;
@@ -45,7 +63,7 @@ int main() {
         aLaserBlocked = false;
       }
 
-      cout << "Is laser 2 blocked? (y/n)\n";
+      cout << "Is laser 2 blocked? (y/n): ";
       cin >> input;
       if (input == 'y') {
         bLaserBlocked = true;
@@ -59,7 +77,7 @@ int main() {
         prevA=aLaserBlocked;
         prevB=bLaserBlocked;
       }
-      else if (bLaserBlocked != prevB) {
+      if (bLaserBlocked != prevB) {
         lightControl(aLaserBlocked, bLaserBlocked);
         prevB=bLaserBlocked;
         prevA=aLaserBlocked;
