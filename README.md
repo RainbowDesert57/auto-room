@@ -61,7 +61,7 @@ Then compile with:
 g++ -o ./../logic-simulation.exe ./src/logic-simulation.cpp
 ```
 ### macOS
-I don't have macOS right now so you have to compile it yourself, here are the steps
+I don't have macOS, so you will need to compile it yourself. Follow these steps:
 
 #### Install dependencies
 ```bash
@@ -85,6 +85,4 @@ g++ -std=c++17 -O2 -Wall -o ./../logic-simulation ./src/logic-simulation.cpp
 ```bash
 git pull
 ```
-This will update everything if there are no changes, if there are any changes, then you need to reinstall
-
-For macOS, compile again for the updated source code using `g++ -std=c++17 -O2 -Wall -o ./../logic-simulation ./src/logic-simulation.cpp` and run using `./../logic-simulation`
+This will update the repository. If you have local changes or compiled it yourself, you may need to recompile or reinstall.
