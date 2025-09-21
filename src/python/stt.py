@@ -8,7 +8,7 @@ client = InferenceClient(
 )
 
 # Path to your audio file
-audio_file = "./output.wav"
+audio_file = "./output-files/output.wav"
 
 # Run transcription
 output = client.automatic_speech_recognition(audio_file, model="openai/whisper-large-v3")

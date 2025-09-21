@@ -2,25 +2,42 @@
 
 echo -e "Using Raspberry Pi OS\n"
 
-# Check if g++ is installed
+# Update once
+sudo apt update
+
+# Install g++
 if ! command -v g++ &> /dev/null
 then
     echo "Installing g++"
-    sudo apt update
     sudo apt install -y g++
 else
     echo "g++ is already installed"
 fi
 
-# Check if libbcm2835-dev is installed
+# Install libbcm2835-dev
 if dpkg -s libbcm2835-dev &> /dev/null
 then
     echo "libbcm2835-dev is already installed"
 else
     echo "Installing libbcm2835-dev"
-    sudo apt update
     sudo apt install -y libbcm2835-dev
 fi
+
+# Install python3 and pip
+if ! command -v python3 &> /dev/null
+then
+    echo "Installing python3 and pip"
+    sudo apt install -y python3 python3-pip
+else
+    echo "python3 is already installed"
+fi
+
+# Install system dependencies for Python audio packages
+sudo apt install -y libportaudio2 libportaudiocpp0 portaudio19-dev libsndfile1
+
+# Install python modules
+echo "Installing python modules"
+python3 -m pip install --user huggingface-hub openai sounddevice soundfile numpy
 
 echo -e "\nMake sure to use #include <bcm2835.h> in your C++ source file\n"
 
@@ -32,9 +49,9 @@ else
     echo "Repository already exists"
 fi
 
+# Ensure build directory exists
+mkdir -p ./auto-room/build
+
 echo -e "\nCompiling\n"
 g++ ./auto-room/src/main.cpp -o ./auto-room/build/main -lbcm2835
-
-echo -e "\nRunning\n"
-./auto-room/build/main
 

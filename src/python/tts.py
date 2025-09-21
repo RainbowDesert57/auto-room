@@ -13,8 +13,8 @@ audio = client.text_to_speech(
 )
 
 # Save to a file
-with open("output.wav", "wb") as f:
+with open("output-files/output.wav", "wb") as f:
     f.write(audio)
 
-print("Audio saved to output.wav")
+print("Audio saved to output-files/output.wav")
 
