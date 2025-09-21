@@ -16,8 +16,8 @@ string executeAction(std::string os, std::string project, std::string action) {
     }
     else if (project == "Auto Room (Logic Simulation)") {
       if (action == "Compile") {
-        system("g++ ./src/logic-simulation.cpp -o build/linux/logic-simulation");
-        return "\nCompiled Auto Room (Logic Simulation)";
+        system("g++ ./src/logic-simulation.cpp -o build/linux/logic-simulation && x86_64-w64-mingw32-g++ -static-libgcc -static-libstdc++ -o ./build/windows/logic-simulation.exe ./src/logic-simulation.cpp");
+        return "\nCompiled Auto Room (Logic Simulation) for both linux and windows";
       }
       else if (action == "Run") {
         system("./build/linux/logic-simulation");
@@ -47,9 +47,33 @@ string executeAction(std::string os, std::string project, std::string action) {
         return "\nERROR: Unknown action for project STT";
       }
     }
-
+    else if (project == "Auto-Room") {
+      if (action == "Compile") {
+        system("g++ ./src/main.cpp -o ./build/linux/main -lbcm2835");
+        return "\nCompiled Auto-Room";
+      }
+      else if (action == "Run") {
+        system("./build/linux/main");
+        return "\nRan Auto-Room";
+      }
+      else {
+        return "\nERROR: Invalid option for project Auto-Room";
+      }
+    }
     else {
       return "\nERROR: Unknown Project!";
+    }
+  }
+  else if (os == "WINDOWS") {
+    if (project == "Auto Room (Logic Simulation)") {
+      if (action == "Compile") {
+        system("x86_64-w64-mingw32-g++ -static-libgcc -static-libstdc++ -o ./build/windows/logic-simulation.exe ./src/logic-simulation.cpp");
+        return "\nCompiled Succesfully";
+      }
+      else if (action == "Run") {
+        system("./build");
+        return "\nRan succesfully";
+      }
     }
   }
   else {

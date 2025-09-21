@@ -8,7 +8,9 @@ from openai import OpenAI
 from huggingface_hub import InferenceClient
 
 # --- Setup clients ---
-HF_TOKEN = os.environ["HF_TOKEN"]
+HF_TOKEN = os.environ.get("HF_TOKEN")
+if not HF_TOKEN:
+    raise RuntimeError("Please set HF_TOKEN environment variable")
 
 tts_client = InferenceClient(provider="fal-ai", api_key=HF_TOKEN)
 stt_model = "openai/whisper-large-v3"
@@ -18,8 +20,8 @@ deepseek_model = "deepseek-ai/DeepSeek-R1:novita"
 # --- Audio settings ---
 samplerate = 44100
 channels = 1
-chunk_duration = 3  # seconds
-silence_thresh = 0.01
+chunk_duration = 3  # seconds for idle listening
+silence_thresh = 0.01  # RMS threshold for silence
 TRIGGERS = ["homie", "jarvis"]
 
 # --- Recording functions ---
@@ -32,7 +34,7 @@ def record_audio(filename, duration=chunk_duration):
 def transcribe(filename):
     return tts_client.automatic_speech_recognition(filename, model=stt_model)["text"].lower()
 
-def synthesize_tts(text, out_filename="response.wav"):
+def synthesize_tts(text, out_filename="output-files/response.wav"):
     audio_bytes = tts_client.text_to_speech(text, model="hexgrad/Kokoro-82M")
     with open(out_filename, "wb") as f:
         f.write(audio_bytes)
@@ -41,7 +43,7 @@ def synthesize_tts(text, out_filename="response.wav"):
 def detect_trigger(text):
     return any(trigger in text for trigger in TRIGGERS)
 
-def record_until_silence(filename="prompt.wav", silence_thresh=0.01, chunk_duration=1):
+def record_until_silence(filename="output-files/prompt.wav", silence_thresh=0.01, chunk_duration=1):
     print("Recording prompt...")
     data = []
     while True:
@@ -57,7 +59,7 @@ def record_until_silence(filename="prompt.wav", silence_thresh=0.01, chunk_durat
     return filename
 
 def generate_deepseek_response(prompt_text):
-    completion = deepseek_client.chat_completions.create(
+    completion = deepseek_client.chat.completions.create(
         model=deepseek_model,
         messages=[{"role": "user", "content": prompt_text}],
     )
@@ -77,14 +79,14 @@ def generate_deepseek_response(prompt_text):
 def main_loop():
     print("Idle listening...")
     while True:
-        record_audio("idle-record.wav")
-        text = transcribe("idle-record.wav")
+        record_audio("output-files/idle-record.wav")
+        text = transcribe("output-files/idle-record.wav")
         if detect_trigger(text):
             print(f"Trigger detected: {text}")
             prompt_file = record_until_silence()
-            finalPrompt = transcribe(prompt_file)
-            print(f"User prompt: {finalPrompt}")
-            response = generate_deepseek_response(finalPrompt)
+            final_prompt = transcribe(prompt_file)
+            print(f"User prompt: {final_prompt}")
+            response = generate_deepseek_response(final_prompt)
             print(f"Assistant response: {response}")
             synthesize_tts(response)
 

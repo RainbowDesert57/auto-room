@@ -23,22 +23,6 @@ else
     sudo apt install -y libbcm2835-dev
 fi
 
-# Install python3 and pip
-if ! command -v python3 &> /dev/null
-then
-    echo "Installing python3 and pip"
-    sudo apt install -y python3 python3-pip
-else
-    echo "python3 is already installed"
-fi
-
-# Install system dependencies for Python audio packages
-sudo apt install -y libportaudio2 libportaudiocpp0 portaudio19-dev libsndfile1
-
-# Install python modules
-echo "Installing python modules"
-python3 -m pip install --user huggingface-hub openai sounddevice soundfile numpy
-
 echo -e "\nMake sure to use #include <bcm2835.h> in your C++ source file\n"
 
 # Clone repo if it doesn't exist
