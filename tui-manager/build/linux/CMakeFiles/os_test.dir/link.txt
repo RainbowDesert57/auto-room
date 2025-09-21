@@ -1,0 +1,1 @@
+/usr/sbin/c++ -Wl,--dependency-file=CMakeFiles/os_test.dir/link.d CMakeFiles/os_test.dir/src/main.cpp.o CMakeFiles/os_test.dir/src/os_detect.cpp.o -o os_test

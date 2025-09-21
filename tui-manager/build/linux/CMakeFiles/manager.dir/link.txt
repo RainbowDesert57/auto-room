@@ -1,0 +1,1 @@
+/usr/sbin/c++ -Wl,--dependency-file=CMakeFiles/manager.dir/link.d CMakeFiles/manager.dir/src/main.cpp.o CMakeFiles/manager.dir/src/manager.cpp.o CMakeFiles/manager.dir/src/actions.cpp.o CMakeFiles/manager.dir/src/os_detect.cpp.o -o manager  -lcurses -lform

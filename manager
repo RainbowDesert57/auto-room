@@ -1,0 +1,3 @@
+#!/bin/bash
+./tui-manager/build/linux/manager
+

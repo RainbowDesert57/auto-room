@@ -1,0 +1,3 @@
+/home/tanish/Documents/auto-room/tui-manager/build/linux/CMakeFiles/manager.dir
+/home/tanish/Documents/auto-room/tui-manager/build/linux/CMakeFiles/edit_cache.dir
+/home/tanish/Documents/auto-room/tui-manager/build/linux/CMakeFiles/rebuild_cache.dir
