@@ -1,59 +1,52 @@
 #include <iostream>
 #include <fstream>
 #include <string>
-#include <cstdlib>
-#include <sstream>
+#include <curl/curl.h>
 
 using namespace std;
 
-// Replace with your actual OpenAI API key
-const string API_KEY = "YOUR_API_KEY_HERE";
-
-string gpt_request(const string &prompt) {
-    string cmd = "curl -s https://api.openai.com/v1/responses "
-                 "-H \"Content-Type: application/json\" "
-                 "-H \"Authorization: Bearer " + API_KEY + "\" "
-                 "-d '{\"model\": \"gpt-5\", \"input\": \"" + prompt + "\"}' "
-                 " -o response.json";
-
-    system(cmd.c_str());
-
-    ifstream inFile("response.json");
-    string line, result;
-    while (getline(inFile, line)) result += line;
-    inFile.close();
-
-    // For simplicity, just return the raw JSON. You can parse with nlohmann/json if desired.
-    return result;
-}
-
-void tts_request(const string &text, const string &outFile) {
-    string cmd = "curl -s https://api.openai.com/v1/audio/speech "
-                 "-H \"Content-Type: application/json\" "
-                 "-H \"Authorization: Bearer " + API_KEY + "\" "
-                 "-d '{\"model\":\"gpt-voice\",\"voice\":\"alloy\",\"input\":\"" + text + "\"}' "
-                 " --output " + outFile;
-
-    system(cmd.c_str());
-
-    cout << "Saved TTS output to " << outFile << endl;
-    cout << "Playing audio...\n";
-    system(("mpg123 " + outFile).c_str()); // or aplay if wav
+// Write binary data callback
+size_t WriteAudio(void* contents, size_t size, size_t nmemb, void* userp) {
+    ofstream* outFile = static_cast<ofstream*>(userp);
+    outFile->write((char*)contents, size * nmemb);
+    return size * nmemb;
 }
 
 int main() {
-    cout << "Enter your prompt: ";
-    string prompt;
-    getline(cin, prompt);
+    string hf_token = "$HF_TOKEN"; // replace with your Hugging Face token
+    string model = "hexgrad/Kokoro-82M";
+    string text = "The answer to the universe is 42";
 
-    cout << "Sending to GPT-5...\n";
-    string gpt_response = gpt_request(prompt);
+    // Build JSON payload
+    string data = R"({"inputs":")" + text + R"("})";
 
-    cout << "GPT response (raw JSON):\n" << gpt_response << endl;
+    CURL* curl = curl_easy_init();
+    if (curl) {
+        ofstream outFile("output.wav", ios::binary);
 
-    cout << "\nConverting to speech...\n";
-    tts_request(prompt, "output.mp3");
+        struct curl_slist* headers = nullptr;
+        headers = curl_slist_append(headers, ("Authorization: Bearer " + hf_token).c_str());
+        headers = curl_slist_append(headers, "Content-Type: application/json");
 
+        string url = "https://api-inference.huggingface.co/models/" + model;
+
+        curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
+        curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
+        curl_easy_setopt(curl, CURLOPT_POSTFIELDS, data.c_str());
+        curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteAudio);
+        curl_easy_setopt(curl, CURLOPT_WRITEDATA, &outFile);
+
+        CURLcode res = curl_easy_perform(curl);
+        if (res != CURLE_OK) {
+            cerr << "curl_easy_perform() failed: " << curl_easy_strerror(res) << endl;
+        } else {
+            cout << "Saved TTS audio to output.wav" << endl;
+        }
+
+        outFile.close();
+        curl_easy_cleanup(curl);
+        curl_slist_free_all(headers);
+    }
     return 0;
 }
 
