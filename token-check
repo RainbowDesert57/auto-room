@@ -1,0 +1,11 @@
+#!/bin/bash
+
+# Check if HF_TOKEN is empty or unset
+if [ -z "$HF_TOKEN" ]; then
+    echo "
+
+    Could not run because now token found
+    Please set your token using 'export \$HF_TOKEN=YOUR_HF_TOKEN'"
+else
+    echo "HF_TOKEN is already set."
+fi

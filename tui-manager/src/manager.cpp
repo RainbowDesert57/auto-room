@@ -2,7 +2,8 @@
 #include <string>
 #include <vector>
 using namespace std;
-vector<string> projects = {"Auto Room (Logic Simulation)", "Jarvis", "Auto-Room"};
+
+vector<string> projects = {"Auto Room (Logic Simulation)", "Jarvis", "Auto-Room", "TTS", "STT"};
 string showMenu() {
     int highlight = 0;                // Current highlighted item
     int n_projects = projects.size();
@@ -34,7 +35,7 @@ string showMenu() {
 
 string showProjectMenu(string chosenProject) {
     vector<string> actions = {"Compile", "Run"};
-    if (chosenProject == "Jarvis") {
+    if (chosenProject == "Jarvis" || chosenProject == "TTS" || chosenProject == "STT") {
       return "Run";
     }
     else {

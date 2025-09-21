@@ -7,7 +7,8 @@ string executeAction(std::string os, std::string project, std::string action) {
     if (project == "Jarvis") {
       if (action == "Run") {
         system("python3 src/python/jarvis.py");
-        return "\nRunning Jarvis";
+        system("./token-check");
+        return "\nRan Jarvis";
       }
       else {
         return "\nERROR: Unknown action for project Jarvis";
@@ -16,13 +17,34 @@ string executeAction(std::string os, std::string project, std::string action) {
     else if (project == "Auto Room (Logic Simulation)") {
       if (action == "Compile") {
         system("g++ ./src/logic-simulation.cpp -o build/linux/logic-simulation");
-        return "\nCompiling Auto Room (Logic Simulation)";
+        return "\nCompiled Auto Room (Logic Simulation)";
       }
       else if (action == "Run") {
-        return "\nRunning Auto Room (Logic Simulation)";
+        system("./build/linux/logic-simulation");
+        return "\nRan Auto Room (Logic Simulation)";
       }
       else {
         return "\nERROR: Unknown action for project Auto Room (Logic Simulation)";
+      }
+    }
+    else if (project == "TTS") {
+      if (action == "Run") {
+        system("python3 src/python/tts.py");
+        system("./token-check");
+        return "\nRan TTS";
+      }
+      else {
+        return "\nERROR: Unknown action for project TTS";
+      }
+    }
+    else if (project == "STT") {
+      if (action == "Run") {
+        system("python3 src/python/stt.py");
+        system("./token-check");
+        return "\nRan STT";
+      }
+      else {
+        return "\nERROR: Unknown action for project STT";
       }
     }
 
