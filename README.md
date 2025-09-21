@@ -1,6 +1,6 @@
 # Auto-Room
 An automated room system built with Raspberry Pi.  
-It controls lights, displays room information on a screen, and provides automation features.  
+It controls lights, displays room information on a screen, provides automation features, and has voice activated chatbot - **Jarvis**.  
 Developed by **Team DPS**.
 
 ![Platforms: ](https://img.shields.io/badge/platform-linux%20%7C%20windows%20%7C%20macos-blue)
