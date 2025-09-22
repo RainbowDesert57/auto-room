@@ -12,6 +12,5 @@ fi
 sudo apt install -y libportaudio2 libportaudiocpp0 portaudio19-dev libsndfile1
 
 # Install python modules
-echo "Installing python modules"
-python3 -m pip install --user huggingface-hub openai sounddevice soundfile numpy
-
+echo "Enabling venv python modules"
+source venv/bin/activate
