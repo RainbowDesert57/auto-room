@@ -50,7 +50,7 @@ string executeAction(std::string os, std::string project, std::string action) {
     else if (project == "Auto-Room") {
       if (action == "Compile") {
         system("g++ ./src/main.cpp -o ./build/linux/main -lbcm2835");
-        return "\nCompiled Auto-Room";
+        return "\nCompiled Auto-Room\nPlease note that it uses <bcm2835.h> header which is hardware specific\nCan only be compiled on Raspberry PI OS";
       }
       else if (action == "Run") {
         system("./build/linux/main");
