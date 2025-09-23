@@ -1,0 +1,1 @@
+/usr/sbin/c++ -Wl,--dependency-file=CMakeFiles/auto-room.dir/link.d "CMakeFiles/auto-room.dir/info-fetch.cpp.o" "CMakeFiles/auto-room.dir/dataManager.cpp.o" "CMakeFiles/auto-room.dir/liveStatFetch.cpp.o" -o auto-room

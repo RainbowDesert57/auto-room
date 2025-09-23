@@ -8,34 +8,39 @@ sudo apt update
 # Install g++
 if ! command -v g++ &> /dev/null
 then
-    echo "Installing g++"
+    echo "
+    Installing g++"
     sudo apt install -y g++
 else
-    echo "g++ is already installed"
+    echo "
+    g++ is already installed"
 fi
 
 # Install libbcm2835-dev
-if dpkg -s libbcm2835-dev &> /dev/null
-then
-    echo "libbcm2835-dev is already installed"
-else
-    echo "Installing libbcm2835-dev"
+    echo "
+    Installing libbcm2835-dev and nlohmann-json"
     sudo apt install -y libbcm2835-dev
-fi
+    sudo apt install -y nlohmann-json
 
-echo -e "\nMake sure to use #include <bcm2835.h> in your C++ source file\n"
+echo -e "
+Make sure to use #include <bcm2835.h> in your C++ source file\n"
 
 # Clone repo if it doesn't exist
 if [ ! -d "./auto-room" ]; then
-    echo "Cloning repository"
+    echo "
+    Cloning repository"
     git clone https://github.com/RainbowDesert57/auto-room.git
 else
-    echo "Repository already exists"
+    echo "
+    Repository already exists"
 fi
 
 # Ensure build directory exists
 mkdir -p ./auto-room/build
 
-echo -e "\nCompiling\n"
+echo -e "
+Compiling..."
 g++ ./auto-room/src/main.cpp -o ./auto-room/build/main -lbcm2835
-
+echo "
+Done, exitting
+"

@@ -3,7 +3,7 @@
 #include <vector>
 using namespace std;
 
-vector<string> projects = {"Auto Room (Logic Simulation)", "Jarvis", "Auto-Room", "TTS", "STT"};
+vector<string> projects = {"Manager", "Auto Room (Logic Simulation)", "Jarvis", "Auto-Room", "TTS", "STT", "Electricity Manager", "Auto-Room GUI"};
 string showMenu() {
     int highlight = 0;                // Current highlighted item
     int n_projects = projects.size();
@@ -22,9 +22,11 @@ string showMenu() {
         int c = getch();
         switch (c) {
             case KEY_UP:
+            case 'k':
                 highlight = (highlight - 1 + n_projects) % n_projects;
                 break;
             case KEY_DOWN:
+            case 'j':
                 highlight = (highlight + 1) % n_projects;
                 break;
             case 10: // Enter key
@@ -35,7 +37,7 @@ string showMenu() {
 
 string showProjectMenu(string chosenProject) {
     vector<string> actions = {"Compile", "Run"};
-    if (chosenProject == "Jarvis" || chosenProject == "TTS" || chosenProject == "STT") {
+    if (chosenProject == "Jarvis" || chosenProject == "TTS" || chosenProject == "STT" || chosenProject == "Auto-Room GUI") {
       return "Run";
     }
     else {
@@ -56,9 +58,11 @@ string showProjectMenu(string chosenProject) {
           int c = getch();
           switch (c) {
               case KEY_UP:
+              case 'k':
                   highlight = (highlight - 1 + n_actions) % n_actions;
                   break;
               case KEY_DOWN:
+              case 'j':
                   highlight = (highlight + 1) % n_actions;
                   break;
               case 10: // Enter key

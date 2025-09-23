@@ -1,9 +1,10 @@
 #include <iostream>
 using namespace std;
 
+int peopleCount = 0;
+int blockCount = 0;
+
 void lightControl(bool &aLaserBlocked, bool &bLaserBlocked) {
-    static int peopleCount = 0;
-    static int blockCount = 0;
 
           cout << "\nDebug output\n";
             if (aLaserBlocked) {

@@ -1,0 +1,52 @@
+body {
+  background-color: black;
+  margin: 0;
+  color: white;
+  font-family: "JetBrains Mono", monospace;
+  font-optical-sizing: auto;
+  font-weight: normal;
+  font-style: normal;
+}
+h1 {
+  font-weight: bold;
+  color: #F6FF00;
+  text-align: center;
+}
+h2 {
+  text-align: center;
+}
+.pages {
+  display: flex;
+  overflow-x: scroll;         /* enable horizontal scrolling */
+  scroll-snap-type: x mandatory;  /* snap horizontally */
+  -webkit-overflow-scrolling: touch; /* smooth on iOS */
+  width: 100vw;
+  height: 100vh;
+}
+.page {
+  scroll-snap-align: start; /* snap to start of each page */
+  flex: 0 0 100%;           /* each page fills the viewport */
+  width: 100vw;
+  height: 100vh;
+  box-sizing: border-box;
+  padding: 10px;
+}
+.content {
+  margin: 10%;
+}
+.live-stat-container {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr); /* 2 columns */
+  grid-template-rows: repeat(2, auto);  /* 2 rows */
+  gap: 20px;                             /* spacing between panels */
+  justify-items: center;                 /* center horizontally */
+  align-items: center;                   /* center vertically */
+  margin-top: 10%;
+}
+
+.live-stat {
+  padding: 15px;
+  border-radius: 10px;
+  text-align: center;
+}
+

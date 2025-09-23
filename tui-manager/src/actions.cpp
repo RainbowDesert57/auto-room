@@ -60,6 +60,32 @@ string executeAction(std::string os, std::string project, std::string action) {
         return "\nERROR: Invalid option for project Auto-Room";
       }
     }
+    else if (project == "Auto-Room GUI") {
+      if (action == "Run") {
+        system("cd ./gui/src/ && npm start && cd ./../../");
+        return "\nRan Auto-Room GUI";
+      }
+    }
+    else if (project == "Electricity Manager") {
+      if (action == "Compile") {
+        system("cd ./gui/src/build/ && make && cd ./../../../");
+        return "\nCompiled Electricity Manager";
+      }
+      else if (action == "Run") {
+        system("cd ./gui/src/ && ./build/auto-room && cd ./../../");
+        return "\nRan Electricity Manager";
+      }
+    }
+    else if (project == "Manager") {
+      if (action == "Compile") {
+        system("cd ./tui-manager/build/linux/ && make && cd ./../../../");
+        return "\nCompiled Manager";
+      }
+      else if (action == "Run") {
+        system("./manager");
+        return "\nRan manager";
+      }
+    }
     else {
       return "\nERROR: Unknown Project!";
     }

@@ -1,0 +1,3 @@
+/home/tanish/Documents/auto-room/gui/src/build/CMakeFiles/auto-room.dir
+/home/tanish/Documents/auto-room/gui/src/build/CMakeFiles/edit_cache.dir
+/home/tanish/Documents/auto-room/gui/src/build/CMakeFiles/rebuild_cache.dir

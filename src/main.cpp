@@ -2,6 +2,9 @@
 #include <bcm2835.h>
 using namespace std;
 
+int peopleCount = 0;
+int blockCount = 0;
+
 // Function to read a channel (0–7) from MCP3008
 uint16_t readADC(uint8_t channel) {
     char buf[3];
@@ -16,8 +19,6 @@ uint16_t readADC(uint8_t channel) {
 }
 
 void lightControl(bool &aLaserBlocked, bool &bLaserBlocked) {
-    static int peopleCount = 0;
-    static int blockCount = 0;
 
           cout << "\nDebug output\n";
             if (aLaserBlocked) {
@@ -83,7 +84,6 @@ int main() {
 
     const uint16_t threshold = 500; // Adjust after testing the LDRs
 
-    //Temporaty code till we dont have raspberry pi
     
     while (true) {
       // Read LDR values from MCP3008 channels
