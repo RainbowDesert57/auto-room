@@ -13,6 +13,10 @@ void saveLiveTotalCurrent(int);
 void saveLiveTotalEnergy(double);
 void saveRefreshCount(int);
 
+// save average
+void saveAvgPower(int);
+void saveAvgCurrent(int);
+
 // Save end-of-day totals to 30-day JSON
 void saveTodayTotal(const StatType& liveTotal);
 

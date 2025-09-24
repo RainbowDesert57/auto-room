@@ -49,6 +49,9 @@ int main () {
       avg.current = avg.power / live.voltage;
       avg.energy  = liveTotal.energy / refreshCount;
       avg.voltage = live.voltage;
+      saveAvgCurrent(avg.current);
+      saveAvgPower(avg.power);
+      saveAvgEnergy(avg.energy);
   
       std::time_t now = std::time(nullptr);
       std::tm* localTime = std::localtime(&now);

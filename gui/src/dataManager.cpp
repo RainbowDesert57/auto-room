@@ -10,6 +10,7 @@ using json = nlohmann::json;
 // File paths
 const std::string liveFile  = "liveTotal.json";
 const std::string dailyFile = "dailyTotal.json";
+const std::string avgFile = "avg.json";
 
 // Helper: load JSON from file
 json loadJson(const std::string &filename) {
@@ -58,6 +59,20 @@ void saveLiveTotalEnergy(double energy) {
     json j = loadJson(liveFile);
     j["energy"] = energy;
     saveJson(liveFile, j);
+}
+
+// ---------------- Save Averages -------------
+
+void saveAvgPower (int power) {
+    json j = loadJson(avgFile);
+    j["power"] = power;
+    saveJson(avgFile, j);
+}
+
+void saveAvgCurrent (int current) {
+    json j = loadJson(avgFile);
+    j["current"] = current;
+    saveJson(avgFile, j);
 }
 
 // ---------------- Refresh count -------------
