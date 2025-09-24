@@ -171,7 +171,7 @@ def wakeword_listener(wake_queue, stop_event):
             # example built-in keyword "jarvis" : NOTE availability depends on pvporcupine model;
             # you may have to use a custom .ppn file named jarvis.ppn if built-in not present.
             porcupine = pvporcupine.create(
-                    access_key="kHV9oOjMokfdDJbbJTjuclwonroBqA47eIOK3fidraA+BGJvgt5yrQ=="
+                    access_key="kHV9oOjMokfdDJbbJTjuclwonroBqA47eIOK3fidraA+BGJvgt5yrQ==",
                     keywords=["jarvis"]
                     )
     except Exception as e:
