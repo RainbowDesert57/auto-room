@@ -33,7 +33,7 @@ void lightControl(bool &aLaserBlocked, bool &bLaserBlocked) {
             }
             else if (!bLaserBlocked) {
               cout << "Laser 2 is not blocked\n\n";
-            }
+           }
 
 
             if (aLaserBlocked) {
