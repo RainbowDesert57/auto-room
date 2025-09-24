@@ -1,109 +1,105 @@
 #include <iostream>
 #include <bcm2835.h>
+#include <unistd.h>   // for usleep
 using namespace std;
 
 int peopleCount = 0;
 int blockCount = 0;
 
-// Function to read a channel (0–7) from MCP3008
+// Read ADC value from MCP3008 (channel 0–7)
 uint16_t readADC(uint8_t channel) {
+    if (channel > 7) return 0;
+
     char buf[3];
-    buf[0] = 1;                    // start bit
-    buf[1] = (8 + channel) << 4;   // single-ended mode + channel number
-    buf[2] = 0;                     // dummy byte
+    buf[0] = 1;                           // start bit
+    buf[1] = (8 + channel) << 4;          // single-ended + channel
+    buf[2] = 0;
 
-    bcm2835_spi_transfern(buf, 3);  // send request and receive result
+    bcm2835_spi_transfern(buf, 3);        // full-duplex SPI transfer
 
-    // Combine the 10-bit result from buf[1] and buf[2]
-    return ((buf[1] & 3) << 8) | (buf[2] & 0xFF);
+    return ((buf[1] & 3) << 8) | (buf[2] & 0xFF); // combine 10-bit result
 }
 
-void lightControl(bool &aLaserBlocked, bool &bLaserBlocked) {
+void lightControl(bool aLaserBlocked, bool bLaserBlocked) {
+    cout << "\n--- Debug Output ---\n";
+    cout << "Laser A: " << (aLaserBlocked ? "BLOCKED" : "CLEAR") << "\n";
+    cout << "Laser B: " << (bLaserBlocked ? "BLOCKED" : "CLEAR") << "\n";
 
-          cout << "\nDebug output\n";
-            if (aLaserBlocked) {
-              cout << "Laser 1 is blocked\n\n";
-            }
-            else if (!aLaserBlocked) {
-              cout << "Laser 1 is not blocked\n\n";
-            }
-            
-            if (bLaserBlocked) {
-              cout << "Laser 2 is blocked\n\n";
-            }
-            else if (!bLaserBlocked) {
-              cout << "Laser 2 is not blocked\n\n";
-           }
+    if (aLaserBlocked) {
+        blockCount++;
+        cout << "blockCount++ -> " << blockCount << "\n";
+    }
 
+    if (bLaserBlocked) {
+        blockCount--;
+        cout << "blockCount-- -> " << blockCount << "\n";
+    }
 
-            if (aLaserBlocked) {
-              blockCount++;
-              cout << "\nblockCount++ triggered\n";
-              cout << "\nblockCount = " << blockCount << "\n\n";
-            }
-            
-            if (bLaserBlocked) {
-              blockCount--;
-              cout<< "\nblockCount-- triggered\n";
-              cout << "\nblockCount = " << blockCount <<"\n\n";
-            }
+    // Entry detection
+    if (blockCount == 0 && bLaserBlocked && !aLaserBlocked) {
+        cout << "Person just ENTERED!\n";
+        peopleCount++;
+    }
+    // Exit detection
+    else if (blockCount == 0 && !bLaserBlocked && aLaserBlocked) {
+        cout << "Person just EXITED!\n";
+        peopleCount--;
+    }
 
-            if (blockCount == 0 && bLaserBlocked && !aLaserBlocked) {
-              cout << "Person just entered!\n";
-              peopleCount++;
-            }
-            else if (blockCount == 0 && !bLaserBlocked && aLaserBlocked) {
-              cout << "Person just exitted!\n";
-              peopleCount--;
-            }
+    // Clamp people count
+    if (peopleCount < 0) peopleCount = 0;
 
-            if (peopleCount == 1){
-              cout << "There is 1 person in the room\n\n"; //This is done for better grammar in the output :D
-            }
-            else if (peopleCount <= 0) {
-              cout << "There are no people in the room\n\n";
-              peopleCount = 0; //Just in case it goes negative...
-            }
-            else {
-              cout<<"There are " <<peopleCount <<" people in the room\n\n";
-            }
+    // Status
+    if (peopleCount == 1)
+        cout << "There is 1 person in the room.\n";
+    else
+        cout << "There are " << peopleCount << " people in the room.\n";
 
+    cout << "--------------------\n";
 }
+
 int main() {
-    bool aLaserBlocked;
-    bool bLaserBlocked;
-    static bool prevA = false;
-    static bool prevB = false;
-    char input;
-    
-    if (!bcm2835_init()) return 1;
-    bcm2835_spi_begin();
+    if (!bcm2835_init()) {
+        cerr << "Failed to initialize bcm2835.\n";
+        return 1;
+    }
+    if (!bcm2835_spi_begin()) {
+        cerr << "Failed to begin SPI.\n";
+        return 1;
+    }
+
+    // SPI setup for MCP3008
     bcm2835_spi_setBitOrder(BCM2835_SPI_BIT_ORDER_MSBFIRST);
     bcm2835_spi_setDataMode(BCM2835_SPI_MODE0);
-    bcm2835_spi_setClockDivider(BCM2835_SPI_CLOCK_DIVIDER_65536);
+    bcm2835_spi_setClockDivider(BCM2835_SPI_CLOCK_DIVIDER_64); // ~4 MHz
 
-    const uint16_t threshold = 500; // Adjust after testing the LDRs
+    const uint16_t threshold = 500; // Tune this after testing LDRs
+    const uint16_t hysteresis = 50; // Adds stability against noise
 
-    
+    bool prevA = false;
+    bool prevB = false;
+
     while (true) {
-      // Read LDR values from MCP3008 channels
-      uint16_t aValue = readADC(0); // Channel 0 -> Laser A
-      uint16_t bValue = readADC(1); // Channel 1 -> Laser B
+        // Read LDR values
+        uint16_t aValue = readADC(0);
+        uint16_t bValue = readADC(1);
 
-      aLaserBlocked = (aValue < threshold);
-      bLaserBlocked = (bValue < threshold);
+        // Apply hysteresis (prevents rapid flicker)
+        bool aLaserBlocked = (aValue < threshold - hysteresis);
+        bool bLaserBlocked = (bValue < threshold - hysteresis);
 
-      if (aLaserBlocked != prevA) {
-        lightControl(aLaserBlocked, bLaserBlocked);
-        prevA=aLaserBlocked;
-        prevB=bLaserBlocked;
-      }
-      if (bLaserBlocked != prevB) {
-        lightControl(aLaserBlocked, bLaserBlocked);
-        prevB=bLaserBlocked;
-        prevA=aLaserBlocked;
-      }
+        // Only trigger when state changes
+        if (aLaserBlocked != prevA || bLaserBlocked != prevB) {
+            lightControl(aLaserBlocked, bLaserBlocked);
+            prevA = aLaserBlocked;
+            prevB = bLaserBlocked;
+        }
 
+        usleep(50000); // 50 ms delay -> ~20 Hz loop
     }
-return 0;
+
+    bcm2835_spi_end();
+    bcm2835_close();
+    return 0;
 }
+
