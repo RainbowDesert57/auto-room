@@ -49,7 +49,7 @@ void lightControl(bool &aLaserBlocked, bool &bLaserBlocked) {
             else if (peopleCount == 0) {
               cout << "There are no people in the room\n\n";
             }
-            else if (peopleCount <= 0) {
+            else if (peopleCount < 0) {
               cout << "PLEASE RECALIBRATE!!\n\n";
               cout << "There are " << peopleCount << " people in the room\n" << "Resetting to 0\n\n";
               peopleCount = 0;
