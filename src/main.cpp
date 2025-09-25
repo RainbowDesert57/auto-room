@@ -83,34 +83,25 @@ int main() {
       bcm2835_gpio_fsel(LDR_B, BCM2835_GPIO_FSEL_INPT);
       bool aLaserBlocked = (bcm2835_gpio_lev(LDR_A) == LOW); // LOW if blocked
       bool bLaserBlocked = (bcm2835_gpio_lev(LDR_B) == LOW);
-      cout << "Is laser 1 blocked? (y/n): ";
-      cin >> input;
-      if (input == 'y') {
-        aLaserBlocked = true;
-      }
-      else if (input == 'n') {
-        aLaserBlocked = false;
-      }
-
-      cout << "Is laser 2 blocked? (y/n): ";
-      cin >> input;
-      if (input == 'y') {
-        bLaserBlocked = true;
-      }
-      else if (input == 'n') {
-        bLaserBlocked = false;
-      }
 
       if (aLaserBlocked != prevA) {
-        lightControl(aLaserBlocked, bLaserBlocked);
-        prevA=aLaserBlocked;
-        prevB=bLaserBlocked;
+        bcm2835_delay(100); // wait 100 ms
+        bool confirmA = (bcm2835_gpio_lev(LDR_A) == LOW);
+        if (confirmA == aLaserBlocked) { 
+          lightControl(aLaserBlocked, bLaserBlocked);
+          prevA = aLaserBlocked;
+          prevB = bLaserBlocked;
+        }
       }
       if (bLaserBlocked != prevB) {
+      bcm2835_delay(100);
+      bool confirmB = (bcm2835_gpio_lev(LDR_B) == LOW);
+      if (confirmB == bLaserBlocked) {
         lightControl(aLaserBlocked, bLaserBlocked);
-        prevB=bLaserBlocked;
-        prevA=aLaserBlocked;
+        prevB = bLaserBlocked;
+        prevA = aLaserBlocked;
       }
+}
 
     }
 
