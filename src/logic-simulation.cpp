@@ -69,7 +69,6 @@ int main() {
     //Temporaty code till we dont have raspberry pi
     
     while (true) {
-
       cout << "Is laser 1 blocked? (y/n): ";
       cin >> input;
       if (input == 'y') {
