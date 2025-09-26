@@ -2,132 +2,89 @@
 #include <bcm2835.h>
 using namespace std;
 
+// GPIO pins (change if wired differently)
 #define LDR_A RPI_V2_GPIO_P1_11  // physical pin 11
 #define LDR_B RPI_V2_GPIO_P1_13  // physical pin 13
 
 int peopleCount = 0;
-int blockCount = 0;
 
-void lightControl(bool &aLaserBlocked, bool &bLaserBlocked) {
+// FSM states
+enum State {
+    IDLE,        // nothing blocked
+    A_BLOCKED,   // A was blocked, waiting for B
+    B_BLOCKED    // B was blocked, waiting for A
+};
 
-          cout << "\nDebug output\n";
-            if (aLaserBlocked) {
-              cout << "Laser 1 is blocked\n\n";
+State currentState = IDLE;
+
+// --- Update FSM ---
+void updateState(bool aLaserBlocked, bool bLaserBlocked) {
+    switch (currentState) {
+        case IDLE:
+            if (aLaserBlocked && !bLaserBlocked) {
+                currentState = A_BLOCKED;
+                cout << "A triggered → waiting for B...\n";
+            }
+            else if (bLaserBlocked && !aLaserBlocked) {
+                currentState = B_BLOCKED;
+                cout << "B triggered → waiting for A...\n";
+            }
+            break;
+
+        case A_BLOCKED:
+            if (bLaserBlocked) {
+                // Sequence A → B → Entry
+                peopleCount++;
+                cout << "✅ Person ENTERED. Count = " << peopleCount << "\n\n";
+                currentState = IDLE;
             }
             else if (!aLaserBlocked) {
-              cout << "Laser 1 is not blocked\n\n";
+                // False trigger (no entry)
+                currentState = IDLE;
             }
-            
-            if (bLaserBlocked) {
-              cout << "Laser 2 is blocked\n\n";
+            break;
+
+        case B_BLOCKED:
+            if (aLaserBlocked) {
+                // Sequence B → A → Exit
+                peopleCount--;
+                if (peopleCount < 0) {
+                    cout << "⚠️  Negative count detected, resetting to 0!\n";
+                    peopleCount = 0;
+                }
+                cout << "🚪 Person EXITED. Count = " << peopleCount << "\n\n";
+                currentState = IDLE;
             }
             else if (!bLaserBlocked) {
-              cout << "Laser 2 is not blocked\n\n";
+                // False trigger
+                currentState = IDLE;
             }
-
-
-            if (aLaserBlocked) {
-              blockCount++;
-              cout << "\nblockCount++ triggered\n";
-              cout << "\nblockCount = " << blockCount << "\n\n";
-            }
-            
-            if (bLaserBlocked) {
-              blockCount--;
-              cout<< "\nblockCount-- triggered\n";
-              cout << "\nblockCount = " << blockCount <<"\n\n";
-            }
-
-            if (blockCount == 0 && bLaserBlocked && !aLaserBlocked) {
-              cout << "Person just entered!\n";
-              peopleCount++;
-            }
-            else if (blockCount == 0 && !bLaserBlocked && aLaserBlocked) {
-              cout << "Person just exitted!\n";
-              peopleCount--;
-            }
-
-            if (peopleCount == 1){
-              cout << "There is 1 person in the room\n\n"; //This is done for better grammar in the output :D
-            }
-            else if (peopleCount == 0) {
-              cout << "There are no people in the room\n\n";
-            }
-            else if (peopleCount < 0) {
-              cout << "PLEASE RECALIBRATE!!\n\n";
-              cout << "There are " << peopleCount << " people in the room\n" << "Resetting to 0\n\n";
-              peopleCount = 0;
-            }
-            else {
-              cout<<"There are " <<peopleCount <<" people in the room\n\n";
-            }
-
+            break;
+    }
 }
+
 int main() {
-    bool aLaserBlocked;
-    bool bLaserBlocked;
-    static bool prevA = false;
-    static bool prevB = false;
-    char input;
-    
-    //Temporaty code till we dont have raspberry pi
-    
-    while (true) {
-      if (!bcm2835_init()) {
+    if (!bcm2835_init()) {
         cerr << "Failed to initialize bcm2835.\n";
         return 1;
-      }
-
-    // Set LDR pins as input
-      bcm2835_gpio_fsel(LDR_A, BCM2835_GPIO_FSEL_INPT);
-      bcm2835_gpio_fsel(LDR_B, BCM2835_GPIO_FSEL_INPT);
-      bool aLaserBlocked = (bcm2835_gpio_lev(LDR_A) == LOW); // LOW if blocked
-      bool bLaserBlocked = (bcm2835_gpio_lev(LDR_B) == LOW);
-
-      if (aLaserBlocked != prevA) {
-        bcm2835_delay(100); // wait 100 ms
-        bool confirmA = (bcm2835_gpio_lev(LDR_A) == LOW);
-        if (confirmA == aLaserBlocked) { 
-          lightControl(aLaserBlocked, bLaserBlocked);
-          prevA = aLaserBlocked;
-          prevB = bLaserBlocked;
-        }
-      }
-      if (bLaserBlocked != prevB) {
-      bcm2835_delay(100);
-      bool confirmB = (bcm2835_gpio_lev(LDR_B) == LOW);
-      if (confirmB == bLaserBlocked) {
-        lightControl(aLaserBlocked, bLaserBlocked);
-        prevB = bLaserBlocked;
-        prevA = aLaserBlocked;
-      }
-}
-
     }
 
+    // Configure GPIO as input
+    bcm2835_gpio_fsel(LDR_A, BCM2835_GPIO_FSEL_INPT);
+    bcm2835_gpio_fsel(LDR_B, BCM2835_GPIO_FSEL_INPT);
 
-   // Practical concept to call lightControl() once any change in laser state is detected
-   // take two bools
-   // bool prevA = false;
-   // bool prevB = false;
-   // and other two bools
-   // 
-   // bool aLaserBlocked;
-   // bool bLaserBlocked;
-   //
-   // once any laser is blocked (a or b) update the bool to false or true accordingly
-   // now,
-   //
-   // if (aLaserBlocked != prevA) {
-   //   lightControl(aLaserBlocked, bLaserBlocked);
-   //   prevA=aLaserBlocked;
-   //   prevB=bLaserBlocked;
-   // }
-   // else if (bLaserBlocked != prevB) {
-   //   lightControl(aLaserBlocked, bLaserBlocked);
-   //   prevB=bLaserBlocked;
-   //   prevA=aLaserBlocked;
-   // }
-   // this will call lightControl on any update!!
-   return 0;
+    cout << "People counter started. Waiting for laser triggers...\n\n";
+
+    while (true) {
+        bool aLaserBlocked = (bcm2835_gpio_lev(LDR_A) == LOW); // LDR LOW when blocked
+        bool bLaserBlocked = (bcm2835_gpio_lev(LDR_B) == LOW);
+
+        updateState(aLaserBlocked, bLaserBlocked);
+
+        bcm2835_delay(50); // ~20Hz sampling rate (tweak if needed)
+    }
+
+    bcm2835_close();
+    return 0;
 }
+

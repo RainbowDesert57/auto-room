@@ -37,7 +37,7 @@ h2 {
 .content {
   margin: 10%;
 }
-.live-stat-container {
+.live-stat-container, .avg-stat-container {
   display: grid;
   grid-template-columns: repeat(2, 1fr); /* 2 columns */
   grid-template-rows: repeat(2, auto);  /* 2 rows */
