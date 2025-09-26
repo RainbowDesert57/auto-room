@@ -43,21 +43,25 @@ WAKE_DISPLAY_NAME = "jarvis"
 
 # LLM + TTS config
 tts_client = InferenceClient(provider="fal-ai", api_key=HF_TOKEN)
-stt_model = "openai/whisper-large-v3"
 deepseek_client = OpenAI(base_url="https://router.huggingface.co/v1", api_key=HF_TOKEN)
 deepseek_model = "deepseek-ai/DeepSeek-R1:novita"
 
 # -------------------------
 # HELPERS
 # -------------------------
-def transcribe_file_with_hf(filepath):
+def transcribe_file_with_api(filepath):
     try:
-        result = tts_client.automatic_speech_recognition(filepath, model=stt_model)
-        text = result.get("text", "") if isinstance(result, dict) else ""
-        return text.lower().strip()
+        client = OpenAI()
+        with open(filepath, "rb") as f:
+            transcript = client.audio.transcriptions.create(
+                model="gpt-4o-transcribe",   # or "whisper-1" if you want Whisper specifically
+                file=f
+            )
+        return transcript.text.lower().strip()
     except Exception as e:
         print("ASR failed:", e)
         return ""
+
 
 def synthesize_tts(text, out_filename=os.path.join(OUTPUT_DIR, "response.wav")):
     try:
@@ -146,12 +150,12 @@ def wakeword_listener(wake_queue, stop_event):
         if USE_CUSTOM_PPN and CUSTOM_PPN_PATHS:
             keyword_paths = list(CUSTOM_PPN_PATHS.values())
             porcupine = pvporcupine.create(
-                access_key="YOUR_PICOVOICE_ACCESS_KEY",
+                access_key="WhhwNjiQoDjyek+11peoVRw7Vb99990zYiBp7ykmerFTfToxee6lTg==",
                 keyword_paths=keyword_paths
             )
         else:
             porcupine = pvporcupine.create(
-                access_key="YOUR_PICOVOICE_ACCESS_KEY",
+                access_key="WhhwNjiQoDjyek+11peoVRw7Vb99990zYiBp7ykmerFTfToxee6lTg==",
                 keywords=["jarvis"]
             )
 
@@ -210,7 +214,7 @@ def main():
             record_until_silence(filename=prompt_file)
 
             print("Transcribing prompt...")
-            user_text = transcribe_file_with_hf(prompt_file)
+            user_text = transcribe_file_with_api(prompt_file)
             print("User said:", user_text)
 
             if not user_text:
