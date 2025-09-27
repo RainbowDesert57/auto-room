@@ -44,7 +44,7 @@ WAKE_DISPLAY_NAME = "jarvis"
 # LLM + TTS config
 tts_client = InferenceClient(provider="fal-ai", api_key=HF_TOKEN)
 deepseek_client = OpenAI(base_url="https://router.huggingface.co/v1", api_key=HF_TOKEN)
-deepseek_model = "deepseek-ai/DeepSeek-R1:novita"
+deepseek_model = "meta-llama/Meta-Llama-3-8B-Instruct"
 
 # -------------------------
 # HELPERS
@@ -121,7 +121,7 @@ def record_until_silence(filename=os.path.join(OUTPUT_DIR, "prompt.wav"),
         else:
             silence_count = 0
 
-        if chunks_recorded >= min_non_silence_chunks and silence_count >= 1:
+        if chunks_recorded >= min_non_silence_chunks and silence_count >= 4:
             break
 
         if chunks_recorded >= max_chunks:
