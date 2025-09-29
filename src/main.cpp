@@ -35,7 +35,7 @@ void updateState(bool aLaserBlocked, bool bLaserBlocked) {
             if (bLaserBlocked) {
                 // Sequence A → B → Entry
                 peopleCount++;
-                cout << "✅ Person ENTERED. Count = " << peopleCount << "\n\n";
+                cout << "Person ENTERED. Count = " << peopleCount << "\n\n";
                 currentState = IDLE;
             }
             else if (!aLaserBlocked) {
@@ -49,10 +49,10 @@ void updateState(bool aLaserBlocked, bool bLaserBlocked) {
                 // Sequence B → A → Exit
                 peopleCount--;
                 if (peopleCount < 0) {
-                    cout << "⚠️  Negative count detected, resetting to 0!\n";
+                    cout << "Negative count detected, resetting to 0!\n";
                     peopleCount = 0;
                 }
-                cout << "🚪 Person EXITED. Count = " << peopleCount << "\n\n";
+                cout << "Person EXITED. Count = " << peopleCount << "\n\n";
                 currentState = IDLE;
             }
             else if (!bLaserBlocked) {

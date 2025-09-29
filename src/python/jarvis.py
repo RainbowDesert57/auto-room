@@ -150,12 +150,12 @@ def wakeword_listener(wake_queue, stop_event):
         if USE_CUSTOM_PPN and CUSTOM_PPN_PATHS:
             keyword_paths = list(CUSTOM_PPN_PATHS.values())
             porcupine = pvporcupine.create(
-                access_key="ENTER_YOU_PICOVOICE_KEY",
+                access_key="hrWL06SMXhczDqzq2h6813YCq6g3fdwey/9Mw0tdWcuGA5P9m7Wi5w==",
                 keyword_paths=keyword_paths
             )
         else:
             porcupine = pvporcupine.create(
-                access_key="ENTER_YOU_PICOVOICE_KEY",
+                access_key="hrWL06SMXhczDqzq2h6813YCq6g3fdwey/9Mw0tdWcuGA5P9m7Wi5w==",
                 keywords=["jarvis"]
             )
 
@@ -236,4 +236,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
