@@ -31,7 +31,7 @@ os.makedirs(OUTPUT_DIR, exist_ok=True)
 # Audio settings
 SAMPLERATE = 16000         # 16kHz is sufficient for speech + lower bandwidth for porcupine
 CHANNELS = 1
-SILENCE_CHUNK_SEC = 0.4    # chunk size used when recording prompt to detect silence
+SILENCE_CHUNK_SEC = 0.5    # chunk size used when recording prompt to detect silence
 SILENCE_RMS_THRESH = 0.01  # adjust to taste
 
 # Wake-word config
@@ -43,13 +43,25 @@ WAKE_DISPLAY_NAME = "jarvis"
 
 # LLM + TTS config
 tts_client = InferenceClient(provider="fal-ai", api_key=HF_TOKEN)
-deepseek_client = OpenAI(base_url="https://router.huggingface.co/v1", api_key=HF_TOKEN)
+deepseek_client = InferenceClient(token=HF_TOKEN)
 deepseek_model = "meta-llama/Meta-Llama-3-8B-Instruct"
 
 # -------------------------
 # HELPERS
 # -------------------------
-def transcribe_file_with_api(filepath):
+ddef transcribe_file_with_api(filepath):
+    """
+    Uses Hugging Face Whisper via InferenceClient to transcribe audio.
+    """
+    try:
+        client = InferenceClient(token=HF_TOKEN)
+        with open(filepath, "rb") as f:
+            transcript = client.audio_to_text(model="openai/whisper-large", file=f)
+        return transcript.text.lower().strip()
+    except Exception as e:
+        print("ASR failed:", e)
+        return ""
+ef transcribe_file_with_api(filepath):
     try:
         client = OpenAI()
         with open(filepath, "rb") as f:
@@ -236,3 +248,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+

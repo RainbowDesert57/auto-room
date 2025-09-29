@@ -1,204 +1,239 @@
-"""
-Jarvis voice assistant - single-file example
-Features:
- - Porcupine wake-word detection ("jarvis" if custom keyword file provided, otherwise built-in "computer")
- - Record audio with sounddevice
- - Whisper (Hugging Face) for STT
- - Meta-Llama-3-8B-Instruct via Hugging Face Inference API
- - Kokoro-82M for TTS via Hugging Face Inference API
 
-Usage:
- - Set environment variables:
-     export PICOVOICE_ACCESS_KEY="pv_..."  # from Picovoice Console
-     export HUGGINGFACE_API_TOKEN="hf_..."  # for Whisper, Meta-Llama, and Kokoro inference
- - If you have a custom jarvis wake word `.ppn`, set:
-     export JARVIS_PPN_PATH="/path/to/jarvis.ppn"
- - Run: python jarvis_voice_assistant.py
+"""
+Jarvis assistant:
+- Low-latency wake-word detection with pvporcupine
+- Record user prompt until short silence
+- Send prompt to LLM (DeepSeek) and synthesize response
 """
 
 import os
+import time
 import queue
-import sys
-import tempfile
-from contextlib import contextmanager
-
+import threading
+import re
 import numpy as np
 import sounddevice as sd
 import soundfile as sf
-import requests
+import shutil
+from huggingface_hub import InferenceClient
+from openai import OpenAI
 
-try:
-    import pvporcupine
-except Exception as e:
-    pvporcupine = None
-    print("Warning: pvporcupine not available. Please install pvporcupine package from Picovoice.")
+# -------------------------
+# CONFIG
+# -------------------------
+HF_TOKEN = os.environ.get("HF_TOKEN")
+if not HF_TOKEN:
+    raise RuntimeError("Please set HF_TOKEN environment variable")
 
-SAMPLE_RATE = 16000
+OUTPUT_DIR = "output-files"
+os.makedirs(OUTPUT_DIR, exist_ok=True)
+
+# Audio settings
+SAMPLERATE = 16000         # 16kHz is sufficient for speech + lower bandwidth for porcupine
 CHANNELS = 1
-RECORD_SECONDS_AFTER_WAKE = 6
+SILENCE_CHUNK_SEC = 0.5    # chunk size used when recording prompt to detect silence
+SILENCE_RMS_THRESH = 0.01  # adjust to taste
 
-HF_TOKEN = os.environ.get("HUGGINGFACE_API_TOKEN")
-ACCESS_KEY = os.environ.get("PICOVOICE_ACCESS_KEY")
-JARVIS_PPN_PATH = os.environ.get("JARVIS_PPN_PATH")
+# Wake-word config
+USE_CUSTOM_PPN = False
+CUSTOM_PPN_PATHS = {}  # e.g., {0: "jarvis.ppn"}
 
+DEBOUNCE_SECONDS = 1.5
+WAKE_DISPLAY_NAME = "jarvis"
 
-def write_wav(path, data, samplerate):
-    sf.write(path, data, samplerate)
+# LLM + TTS config
+tts_client = InferenceClient(provider="fal-ai", api_key=HF_TOKEN)
+deepseek_client = InferenceClient(token=HF_TOKEN)
+deepseek_model = "meta-llama/Meta-Llama-3-8B-Instruct"
 
-
-@contextmanager
-def record_audio(duration_seconds, samplerate=SAMPLE_RATE, channels=CHANNELS):
-    with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as tmp:
-        filename = tmp.name
-    print(f"Recording {duration_seconds}s -> {filename}")
-    recording = sd.rec(int(duration_seconds * samplerate), samplerate=samplerate, channels=channels, dtype='int16')
-    sd.wait()
-    write_wav(filename, recording, samplerate)
+# -------------------------
+# HELPERS
+# -------------------------
+def transcribe_file_with_api(filepath):
+    """
+    Uses Hugging Face Whisper via InferenceClient to transcribe audio.
+    """
     try:
-        yield filename
-    finally:
-        pass
-
-
-def transcribe_with_whisper_hf(wav_path):
-    if not HF_TOKEN:
-        print("HF token missing. Skipping transcription.")
-        return None
-    model = "openai/whisper-small"
-    url = f"https://api-inference.huggingface.co/models/{model}"
-    headers = {"Authorization": f"Bearer {HF_TOKEN}"}
-    with open(wav_path, "rb") as f:
-        data = f.read()
-    print("Uploading audio to Whisper (HF) for transcription...")
-    resp = requests.post(url, headers=headers, data=data)
-    if resp.status_code != 200:
-        print("Whisper HF API error:", resp.status_code, resp.text)
-        return None
-    try:
-        j = resp.json()
-        if isinstance(j, list) and len(j) > 0 and 'text' in j[0]:
-            return j[0]['text']
-        if isinstance(j, dict) and 'text' in j:
-            return j['text']
-        return str(j)
+        client = InferenceClient(token=HF_TOKEN)
+        with open(filepath, "rb") as f:
+            transcript = client.audio_to_text(model="openai/whisper-large", file=f)
+        return transcript.text.lower().strip()
     except Exception as e:
-        print('Failed to parse Whisper HF response:', e)
-        return None
+        print("ASR failed:", e)
+        return ""
 
 
-def query_meta_llama(prompt, max_tokens=512, temperature=0.2):
-    if not HF_TOKEN:
-        print("HF token missing. Can't call Meta-Llama.")
-        return None
-    model = "meta-llama/Meta-Llama-3-8B-Instruct"
-    url = f"https://api-inference.huggingface.co/models/{model}"
-    headers = {"Authorization": f"Bearer {HF_TOKEN}", "Content-Type": "application/json"}
-    payload = {"inputs": prompt, "parameters": {"max_new_tokens": max_tokens, "temperature": temperature}}
-    print("Calling Meta-Llama Inference API...")
-    r = requests.post(url, headers=headers, json=payload, timeout=120)
-    if r.status_code != 200:
-        print("HF inference error:", r.status_code, r.text)
-        return None
+def synthesize_tts(text, out_filename=os.path.join(OUTPUT_DIR, "response.wav")):
     try:
-        j = r.json()
-        if isinstance(j, list) and len(j) > 0 and 'generated_text' in j[0]:
-            return j[0]['generated_text']
-        if isinstance(j, dict) and 'generated_text' in j:
-            return j['generated_text']
-        if isinstance(j, list) and len(j) > 0 and isinstance(j[0], str):
-            return j[0]
-        return str(j)
-    except Exception as e:
-        print('Failed to parse HF response:', e)
-        return None
-
-
-def synthesize_kokoro(text, output_wav_path):
-    if not HF_TOKEN:
-        print("HF token missing. Can't call Kokoro.")
-        return False
-    model = "hexgrad/Kokoro-82M"
-    url = f"https://api-inference.huggingface.co/models/{model}"
-    headers = {"Authorization": f"Bearer {HF_TOKEN}"}
-    payload = {"inputs": text}
-    print("Calling Kokoro TTS inference API...")
-    r = requests.post(url, headers=headers, json=payload, timeout=120)
-    if r.status_code != 200:
-        print("Kokoro inference error:", r.status_code, r.text)
-        return False
-    if r.content[:4] == b'RIFF':
-        with open(output_wav_path, 'wb') as f:
-            f.write(r.content)
-        return True
-    try:
-        obj = r.json()
-        print("Unexpected JSON response:", obj)
-    except Exception:
-        pass
-    return False
-
-
-def play_wav(path):
-    print(f"Playing: {path}")
-    data, sr = sf.read(path, dtype='int16')
-    sd.play(data, sr)
-    sd.wait()
-
-
-def run_assistant():
-    if pvporcupine is None:
-        print("pvporcupine not found. Please install and try again.")
-        return
-    if not ACCESS_KEY:
-        print("PICOVOICE_ACCESS_KEY not set. Exiting.")
-        return
-    try:
-        if JARVIS_PPN_PATH and os.path.exists(JARVIS_PPN_PATH):
-            print("Using custom Jarvis wake word file.")
-            porcupine = pvporcupine.create(access_key=ACCESS_KEY, keyword_paths=[JARVIS_PPN_PATH])
+        audio_bytes = tts_client.text_to_speech(text, model="hexgrad/Kokoro-82M")
+        with open(out_filename, "wb") as f:
+            f.write(audio_bytes)
+        # play on macOS (afplay) or Linux (aplay)
+        if os.name == "posix":
+            if shutil.which("afplay"):
+                os.system(f"afplay {out_filename} &")
+            elif shutil.which("aplay"):
+                os.system(f"aplay {out_filename} &")
+            else:
+                print("No system audio player found; saved to", out_filename)
         else:
-            print("Using built-in 'computer' wake word.")
-            porcupine = pvporcupine.create(access_key=ACCESS_KEY, keywords=["computer"])
+            print("Saved TTS to", out_filename)
     except Exception as e:
-        print("Failed to create Porcupine:", e)
+        print("TTS error:", e)
+
+def generate_deepseek_response(prompt_text):
+    try:
+        completion = deepseek_client.chat.completions.create(
+            model=deepseek_model,
+            messages=[{"role": "user", "content": prompt_text}],
+        )
+        raw_text = completion.choices[0].message.content
+        clean_text = re.sub(r"<think>.*?</think>", "", raw_text, flags=re.DOTALL)
+        clean_text = re.sub(r"(\*\*|__|\*|`)", "", clean_text)
+        return clean_text.strip()
+    except Exception as e:
+        print("DeepSeek request failed:", e)
+        return "Sorry, I couldn't get a response."
+
+# -------------------------
+# RECORDING PROMPT UNTIL SILENCE
+# -------------------------
+def record_until_silence(filename=os.path.join(OUTPUT_DIR, "prompt.wav"),
+                         silence_thresh=SILENCE_RMS_THRESH,
+                         chunk_duration=SILENCE_CHUNK_SEC,
+                         samplerate=SAMPLERATE):
+    print("Recording prompt (speak now)...")
+    frames = []
+    max_chunks = int(30 / chunk_duration)
+    chunks_recorded = 0
+    silence_count = 0
+    min_non_silence_chunks = 1
+
+    while True:
+        chunk = sd.rec(int(chunk_duration * samplerate), samplerate=samplerate, channels=CHANNELS)
+        sd.wait()
+        chunks_recorded += 1
+        rms = np.sqrt(np.mean(chunk.astype(np.float32)**2))
+        frames.append(chunk)
+
+        if rms < silence_thresh:
+            silence_count += 1
+        else:
+            silence_count = 0
+
+        if chunks_recorded >= min_non_silence_chunks and silence_count >= 4:
+            break
+
+        if chunks_recorded >= max_chunks:
+            print("Reached max prompt length.")
+            break
+
+    audio = np.concatenate(frames, axis=0)
+    sf.write(filename, audio, samplerate)
+    print("Saved prompt to", filename)
+    return filename
+
+# -------------------------
+# WAKE-WORD THREAD (pvporcupine)
+# -------------------------
+def wakeword_listener(wake_queue, stop_event):
+    try:
+        import pvporcupine
+        # Auto-select input device
+        input_devices = [i for i, d in enumerate(sd.query_devices()) if d['max_input_channels'] > 0]
+        if not input_devices:
+            raise RuntimeError("No input devices found. Please connect a microphone.")
+        device_index = input_devices[0]
+        print(f"Using input device index {device_index}: {sd.query_devices(device_index)['name']}")
+
+        # Create porcupine instance
+        if USE_CUSTOM_PPN and CUSTOM_PPN_PATHS:
+            keyword_paths = list(CUSTOM_PPN_PATHS.values())
+            porcupine = pvporcupine.create(
+                access_key="hrWL06SMXhczDqzq2h6813YCq6g3fdwey/9Mw0tdWcuGA5P9m7Wi5w==",
+                keyword_paths=keyword_paths
+            )
+        else:
+            porcupine = pvporcupine.create(
+                access_key="hrWL06SMXhczDqzq2h6813YCq6g3fdwey/9Mw0tdWcuGA5P9m7Wi5w==",
+                keywords=["jarvis"]
+            )
+
+    except Exception as e:
+        print("Failed to initialize pvporcupine:", e)
         return
 
-    audio_queue = queue.Queue()
+    print("Wake-word listener started.")
+    last_trigger = 0.0
 
-    def audio_callback(indata, frames, time_info, status):
-        if status:
-            print(status, file=sys.stderr)
-        audio_queue.put(bytes(indata))
-
-    stream = sd.InputStream(samplerate=SAMPLE_RATE, blocksize=porcupine.frame_length, channels=1, dtype='int16', callback=audio_callback)
-
-    print("Jarvis is listening... Say wake word to activate.")
-    with stream:
-        try:
-            while True:
-                frame = audio_queue.get()
-                pcm = np.frombuffer(frame, dtype=np.int16)
+    try:
+        with sd.InputStream(
+            device=device_index,
+            channels=1,
+            samplerate=porcupine.sample_rate,
+            blocksize=porcupine.frame_length,
+            dtype="int16"
+        ) as stream:
+            while not stop_event.is_set():
+                pcm = stream.read(porcupine.frame_length)[0]
+                pcm = np.frombuffer(pcm, dtype=np.int16)
                 result = porcupine.process(pcm)
                 if result >= 0:
-                    print("Wake word detected!")
-                    with record_audio(RECORD_SECONDS_AFTER_WAKE) as wavfn:
-                        text = transcribe_with_whisper_hf(wavfn)
-                        print("User said:", text)
-                        if not text:
-                            continue
-                        response = query_meta_llama(text)
-                        if not response:
-                            continue
-                        print("Assistant:", response)
-                        outwav = tempfile.NamedTemporaryFile(suffix='.wav', delete=False).name
-                        if synthesize_kokoro(response, outwav):
-                            play_wav(outwav)
-        except KeyboardInterrupt:
-            print("Exiting...")
-        finally:
-            porcupine.delete()
+                    now = time.time()
+                    if now - last_trigger < DEBOUNCE_SECONDS:
+                        continue
+                    last_trigger = now
+                    print(f"Wake word detected ({WAKE_DISPLAY_NAME}) at {time.strftime('%X')}")
+                    wake_queue.put(now)
 
+    except Exception as e:
+        print("Wake-word listener runtime error:", e)
+    finally:
+        porcupine.delete()
+        print("Wake-word listener stopped.")
 
-if __name__ == '__main__':
-    run_assistant()
+# -------------------------
+# MAIN COORDINATOR
+# -------------------------
+def main():
+    wake_q = queue.Queue()
+    stop_event = threading.Event()
+
+    listener_thread = threading.Thread(target=wakeword_listener, args=(wake_q, stop_event), daemon=True)
+    listener_thread.start()
+
+    try:
+        print("Jarvis idle; listening for wake word.")
+        while True:
+            try:
+                trigger_time = wake_q.get(timeout=0.5)
+            except queue.Empty:
+                continue
+
+            prompt_file = os.path.join(OUTPUT_DIR, f"prompt_{int(time.time())}.wav")
+            record_until_silence(filename=prompt_file)
+
+            print("Transcribing prompt...")
+            user_text = transcribe_file_with_api(prompt_file)
+            print("User said:", user_text)
+
+            if not user_text:
+                print("No transcription; skipping.")
+                continue
+
+            print("Generating response from DeepSeek...")
+            assistant_text = generate_deepseek_response(user_text)
+            print("Assistant:", assistant_text)
+
+            print("Synthesizing TTS...")
+            synthesize_tts(assistant_text)
+
+    except KeyboardInterrupt:
+        print("Stopping Jarvis...")
+    finally:
+        stop_event.set()
+        listener_thread.join(timeout=2)
+
+if __name__ == "__main__":
+    main()
 
